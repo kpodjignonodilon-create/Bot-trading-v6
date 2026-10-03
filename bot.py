@@ -1,9 +1,18 @@
-import requests, time
+import requests, time, urllib.parse
 
-# TON NUMERO WHATSAPP
-NUMERO = "+229XXXXXXXX"  # Mets ton numéro avec +229
+PHONE = "22957142465"
+APIKEY = "MET_TA_CLE_ICI"  # Ex: 1234567 que CallMeBot t'a donné
 
-SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"]
+
+def send_whatsapp(msg):
+    try:
+        text = urllib.parse.quote(msg)
+        url = f"https://api.callmebot.com/whatsapp.php?phone={PHONE}&text={text}&apikey={APIKEY}"
+        r = requests.get(url, timeout=15)
+        print(f"WhatsApp envoyé: {r.text}")
+    except Exception as e:
+        print(e)
 
 def get_signal(symbol):
     try:
@@ -12,18 +21,19 @@ def get_signal(symbol):
         price = float(r['lastPrice'])
         change = float(r['priceChangePercent'])
         if change > 2.5:
-            return f"🚀 {symbol} HAUSSIER +{change:.2f}% | Prix: {price}"
+            return f"🚀 {symbol} HAUSSIER +{change:.2f}% Prix: {price}"
         elif change < -2.5:
-            return f"📉 {symbol} BAISSIER {change:.2f}% | Prix: {price}"
-        else:
-            return None
+            return f"📉 {symbol} BAISSIER {change:.2f}% Prix: {price}"
+        return None
     except:
         return None
 
-print("✅ BOT V6 WHATSAPP LANCE")
+send_whatsapp("✅ BOT V6 WHATSAPP LANCE - BTC/ETH/SOL/BNB")
+print("BOT LANCE")
+
 while True:
     for sym in SYMBOLS:
         sig = get_signal(sym)
         if sig:
-            print(sig) # Ici on affichera, et Render enverra sur WhatsApp via API
+            send_whatsapp(sig)
     time.sleep(60)

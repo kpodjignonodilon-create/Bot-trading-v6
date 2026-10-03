@@ -6,7 +6,7 @@ from flask import Flask
 import threading
 
 PHONE = os.getenv("PHONE", "22957142465")
-APIKEY = os.getenv("APIKEY", "9300299")
+APIKEY = os.getenv("APIKEY", "3189307")
 
 app = Flask(__name__)
 

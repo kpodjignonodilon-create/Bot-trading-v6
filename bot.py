@@ -1,7 +1,7 @@
 import requests, time, urllib.parse
 
 PHONE = "22957142465"
-APIKEY = 3189307  # Ex: 1234567 que CallMeBot t'a donné
+APIKEY = "3189307"   # Ex: 1234567 que CallMeBot t'a donné
 
 SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"]
 

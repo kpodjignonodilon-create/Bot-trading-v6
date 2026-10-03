@@ -6,7 +6,7 @@ import pytz
 from flask import Flask
 import threading
 
-PHONE = os.getenv("PHONE", "2290157142465")
+PHONE = os.getenv("PHONE", "22957142465")
 APIKEY = os.getenv("APIKEY", "9300299")
 FOREX_ALERT_PCT = 0.4
 CRYPTO_ALERT_PCT = 2.5

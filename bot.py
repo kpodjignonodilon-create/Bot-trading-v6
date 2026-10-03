@@ -2,7 +2,7 @@ import os, time, requests, urllib.parse, threading
 from flask import Flask
 
 PHONE = os.getenv("PHONE", "22957142465")
-APIKEY = os.getenv("APIKEY", "9300299")
+APIKEY = os.getenv("APIKEY", "3189307")
 
 app = Flask(__name__)
 @app.route('/')

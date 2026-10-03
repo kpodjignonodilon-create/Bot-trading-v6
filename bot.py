@@ -1,13 +1,9 @@
-import requests, time, threading, asyncio
-from telegram import Bot
-import datetime
+import requests, time
 
-TOKEN = "7866939003:AAEuN5N5F6J3N5mP7p7v4L4Z3p4Q4R4S4T4"
-CHAT_ID = "7407505945"
+# TON NUMERO WHATSAPP
+NUMERO = "+229XXXXXXXX"  # Mets ton numéro avec +229
 
 SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
-
-bot = Bot(token=TOKEN)
 
 def get_signal(symbol):
     try:
@@ -21,19 +17,13 @@ def get_signal(symbol):
             return f"📉 {symbol} BAISSIER {change:.2f}% | Prix: {price}"
         else:
             return None
-    except Exception as e:
-        print(e)
+    except:
         return None
 
-async def loop():
-    await bot.send_message(chat_id=CHAT_ID, text="✅ BOT V6 MULTI ACTIF - Surveillance BTC/ETH/SOL")
-    while True:
-        for sym in SYMBOLS:
-            sig = get_signal(sym)
-            if sig:
-                await bot.send_message(chat_id=CHAT_ID, text=sig)
-                print(sig)
-        await asyncio.sleep(60)
-
-if __name__ == "__main__":
-    asyncio.run(loop())
+print("✅ BOT V6 WHATSAPP LANCE")
+while True:
+    for sym in SYMBOLS:
+        sig = get_signal(sym)
+        if sig:
+            print(sig) # Ici on affichera, et Render enverra sur WhatsApp via API
+    time.sleep(60)

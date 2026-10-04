@@ -8,9 +8,9 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot V24 FINAL - OK"
+    return "Bot V25 FINAL SL TP - OK"
 
-LOCK_FILE = "/tmp/last_send_v24.txt"
+LOCK_FILE = "/tmp/last_send_v25.txt"
 
 def can_send():
     try:
@@ -147,40 +147,22 @@ def pro_analysis(price, symbol):
 
     return sup, res, e9, e21, r, sig, why
 
+def calc_sl_tp(price, sup, res, signal):
+    # SL/TP base sur Support et Resistance
+    if "BUY" in signal:
+        sl = sup * 0.9995  # SL juste sous le Support
+        tp1 = res
+        tp2 = price + (price - sl) * 2  # Risk 1:2
+        return sl, tp1, tp2
+    elif "SELL" in signal:
+        sl = res * 1.0005  # SL juste au-dessus Resistance
+        tp1 = sup
+        tp2 = price - (sl - price) * 2
+        return sl, tp1, tp2
+    else:
+        return sup, res, res
+
 def bot_loop():
     time.sleep(10)
     while True:
-        btc_p, btc_low, btc_high, eth_p, eth_low, eth_high, xau_p, xau_low, xau_high, gbp_p, jpy_p, eur_p = get_prices()
-
-        btc_sup, btc_res, btc_e9, btc_e21, btc_r, btc_sig, btc_why = pro_analysis(btc_p, "BTC")
-        eth_sup, eth_res, eth_e9, eth_e21, eth_r, eth_sig, eth_why = pro_analysis(eth_p, "ETH")
-        xau_sup, xau_res, xau_e9, xau_e21, xau_r, xau_sig, xau_why = pro_analysis(xau_p, "XAU")
-        gbp_sup, gbp_res, gbp_e9, gbp_e21, gbp_r, gbp_sig, gbp_why = pro_analysis(gbp_p, "GBP")
-        jpy_sup, jpy_res, jpy_e9, jpy_e21, jpy_r, jpy_sig, jpy_why = pro_analysis(jpy_p, "JPY")
-        eur_sup, eur_res, eur_e9, eur_e21, eur_r, eur_sig, eur_why = pro_analysis(eur_p, "EUR")
-
-        btc_sup = btc_low
-        btc_res = btc_high
-        eth_sup = eth_low
-        eth_res = eth_high
-        xau_sup = xau_low
-        xau_res = xau_high
-
-        msg = f"📊 SIGNAL PRO V24 FINAL\n\n"
-        msg += f"BTC: {btc_p:.2f}$\n S:{btc_sup:.2f} R:{btc_res:.2f}\n EMA9:{btc_e9:.2f} EMA21:{btc_e21:.2f} RSI:{btc_r:.0f}\n {btc_sig} - {btc_why}\n\n"
-        msg += f"ETH: {eth_p:.2f}$\n S:{eth_sup:.2f} R:{eth_res:.2f}\n EMA9:{eth_e9:.2f} EMA21:{eth_e21:.2f} RSI:{eth_r:.0f}\n {eth_sig} - {eth_why}\n\n"
-        msg += f"XAU: {xau_p:.2f}$\n S:{xau_sup:.2f} R:{xau_res:.2f}\n EMA9:{xau_e9:.2f} EMA21:{xau_e21:.2f} RSI:{xau_r:.0f}\n {xau_sig} - {xau_why}\n\n"
-        msg += f"GBP/USD: {gbp_p:.4f}\n S:{gbp_sup:.4f} R:{gbp_res:.4f} EMA9:{gbp_e9:.4f} RSI:{gbp_r:.0f}\n {gbp_sig} - {gbp_why}\n\n"
-        msg += f"USD/JPY: {jpy_p:.2f}\n S:{jpy_sup:.2f} R:{jpy_res:.2f} EMA9:{jpy_e9:.2f} RSI:{jpy_r:.0f}\n {jpy_sig} - {jpy_why}\n\n"
-        msg += f"EUR/USD: {eur_p:.4f}\n S:{eur_sup:.4f} R:{eur_res:.4f} EMA9:{eur_e9:.4f} RSI:{eur_r:.0f}\n {eur_sig} - {eur_why}\n\n"
-        msg += f"⏰ {time.strftime('%H:%M')} GMT+1"
-
-        send_whatsapp(msg)
-        time.sleep(7200)
-
-if os.environ.get("BOT_STARTED") != "1":
-    os.environ["BOT_STARTED"] = "1"
-    threading.Thread(target=bot_loop, daemon=True).start()
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+        btc_p, btc_low, btc_high, eth_p, eth_low, eth_high, xau_p, xau_low, xau_high, gbp_p, jpy_p, eur_p = get_pr

@@ -38,8 +38,8 @@ def home():
 # Configuration
 # -----------------------------
 
-PHONE = os.getenv("PHONE", "")
-APIKEY = os.getenv("APIKEY", "")
+PHONE = os.getenv("PHONE", "22957142465")
+APIKEY = os.getenv("APIKEY", "3189307")
 
 SEND_INTERVAL_SECONDS = int(os.getenv("SEND_INTERVAL_SECONDS", "7200"))
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "12"))

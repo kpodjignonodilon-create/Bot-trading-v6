@@ -6,21 +6,26 @@ APIKEY = os.getenv("APIKEY", "3189307")
 
 app = Flask(__name__)
 @app.route('/')
-def home(): return "Bot V15 OPPORTUNISTE - Live"
+def home(): return "Bot V16 FINAL PROPRE - Live"
 
-LOCK_FILE = "/tmp/last_send.txt"
+LOCK_FILE = "/tmp/last_send_v16.txt"
 
 def can_send():
     try:
         if not os.path.exists(LOCK_FILE): return True
         with open(LOCK_FILE, 'r') as f:
             last=float(f.read().strip() or 0)
-        if time.time() - last < 5400: return False
+        if time.time() - last < 5400: # 90 min bloque doublon
+            print(f"Doublon bloqué, dernier il y a {(time.time()-last)/60:.0f}min")
+            return False
         return True
     except: return True
 
 def mark_sent():
-    with open(LOCK_FILE, 'w') as f: f.write(str(time.time()))
+    try:
+        with open(LOCK_FILE, 'w') as f:
+            f.write(str(time.time()))
+    except: pass
 
 def send_whatsapp(msg):
     if not can_send(): return False
@@ -28,67 +33,90 @@ def send_whatsapp(msg):
         url=f"https://api.callmebot.com/whatsapp.php?phone={PHONE}&text={urllib.parse.quote(msg)}&apikey={APIKEY}"
         requests.get(url, timeout=15)
         mark_sent()
+        print("Envoyé")
         return True
-    except: return False
+    except Exception as e:
+        print(e)
+        return False
 
-def get_crypto():
+def get_binance_data(symbol):
+    # Retourne prix actuel, plus bas 24h (support), plus haut 24h (resistance)
     try:
-        r=requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd", timeout=10).json()
-        if r['bitcoin']['usd']>0: return r
-    except: pass
-    return {"bitcoin":{"usd":84800},"ethereum":{"usd":2680}}
+        r=requests.get(f'https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}', timeout=10).json()
+        cur=float(r['lastPrice'])
+        low=float(r['lowPrice'])
+        high=float(r['highPrice'])
+        return cur, low, high
+    except:
+        return None, None, None
 
-def get_xau():
+def get_xau_real():
+    # XAU via Gold-API + Binance PAXG pour niveaux
+    price=4141.0
+    low, high = None, None
     try:
         r=requests.get('https://api.gold-api.com/price/XAU', timeout=10).json()
-        p=float(r['price'])
-        if p>3000: return p
+        price=float(r['price'])
     except: pass
-    return 4141.80
 
-def get_fx(b,t):
-    try: return float(requests.get(f"https://open.er-api.com/v6/latest/{b}", timeout=10).json()['rates'][t])
+    try:
+        b=requests.get('https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT', timeout=10).json()
+        low=float(b['lowPrice'])
+        high=float(b['highPrice'])
+        if price<3000: price=float(b['lastPrice'])
+    except:
+        low=price*0.995
+        high=price*1.005
+
+    return price, low, high
+
+def get_fx_rate(base,to):
+    try:
+        r=requests.get(f"https://open.er-api.com/v6/latest/{base}", timeout=10).json()
+        return float(r['rates'][to])
     except: return 1.0
 
+def get_signal(cur,sup,res):
+    # Logique pro: proche du support = BUY, proche resistance = SELL
+    if cur <= sup*1.001: return "🔵 BUY"
+    if cur >= res*0.999: return "🔴 SELL"
+    return "🟡 WAIT"
+
 def bot_loop():
-    time.sleep(15)
+    time.sleep(10)
     while True:
         try:
-            c=get_crypto()
-            btc=float(c['bitcoin']['usd']); eth=float(c['ethereum']['usd'])
-            xau=get_xau()
-            gbp=1/get_fx('USD','GBP'); uj=get_fx('USD','JPY'); eu=get_fx('EUR','USD')
+            # 1. BTC
+            btc_cur, btc_low, btc_high = get_binance_data("BTCUSDT")
+            if not btc_cur: btc_cur, btc_low, btc_high = 84800, 83500, 86200
 
-            # BANDES SERREES POUR OPPORTUNITE
-            btc_sup, btc_res = btc*0.992, btc*1.008  # 0.8%
-            eth_sup, eth_res = eth*0.992, eth*1.008
-            xau_sup, xau_res = xau*0.997, xau*1.003  # 0.3% = 12$ pour l'OR
-            gbp_sup, gbp_res = gbp*0.998, gbp*1.002
-            uj_sup, uj_res = uj*0.998, uj*1.002
-            eu_sup, eu_res = eu*0.998, eu*1.002
+            # 2. ETH
+            eth_cur, eth_low, eth_high = get_binance_data("ETHUSDT")
+            if not eth_cur: eth_cur, eth_low, eth_high = 2680, 2620, 2740
 
-            signals=[]
-            def check(sym,cur,sup,res,dec=2):
-                if cur <= sup:
-                    signals.append(f"{sym}: {cur:.{dec}f}\n Sup: {sup:.{dec}f} | Res: {res:.{dec}f}\n 🔵 BUY OPPORTUNITÉ")
-                elif cur >= res:
-                    signals.append(f"{sym}: {cur:.{dec}f}\n Sup: {sup:.{dec}f} | Res: {res:.{dec}f}\n 🔴 SELL OPPORTUNITÉ")
+            # 3. XAU - VRAI PRIX
+            xau_cur, xau_low, xau_high = get_xau_real()
 
-            check("BTC/USD",btc,btc_sup,btc_res)
-            check("ETH/USD",eth,eth_sup,eth_res)
-            check("XAU/USD",xau,xau_sup,xau_res)
-            check("GBP/USD",gbp,gbp_sup,gbp_res,4)
-            check("USD/JPY",uj,uj_sup,uj_res)
-            check("EUR/USD",eu,eu_sup,eu_res,4)
+            # 4. FOREX
+            gbp=1/get_fx_rate('USD','GBP')
+            uj=get_fx_rate('USD','JPY')
+            eu=get_fx_rate('EUR','USD')
 
-            if signals: # ENVOIE UNIQUEMENT SI OPPORTUNITE
-                msg="📊 SIGNAL MULTI ODILON - MOMENT OPPORTUN! 🚨\n\n" + "\n\n".join(signals) + f"\n\n⏰ {time.strftime('%H:%M')}"
-                send_whatsapp(msg)
-            else:
-                print(f"{time.strftime('%H:%M')} - Pas d'opportunité, silence")
+            msg=f"📊 SIGNAL MULTI ODILON\n\n"
+            msg+=f"BTC/USD: {btc_cur:.2f}$\n Sup: {btc_low:.2f} | Res: {btc_high:.2f}\n {get_signal(btc_cur,btc_low,btc_high)}\n\n"
+            msg+=f"ETH/USD: {eth_cur:.2f}$\n Sup: {eth_low:.2f} | Res: {eth_high:.2f}\n {get_signal(eth_cur,eth_low,eth_high)}\n\n"
+            msg+=f"XAU/USD: {xau_cur:.2f}$\n Sup: {xau_low:.2f} | Res: {xau_high:.2f}\n {get_signal(xau_cur,xau_low,xau_high)}\n\n"
+            msg+=f"GBP/USD: {gbp:.4f}\n Sup: {gbp*0.995:.4f} | Res: {gbp*1.005:.4f}\n {get_signal(gbp,gbp*0.995,gbp*1.005)}\n\n"
+            msg+=f"USD/JPY: {uj:.2f}\n Sup: {uj*0.995:.2f} | Res: {uj*1.005:.2f}\n {get_signal(uj,uj*0.995,uj*1.005)}\n\n"
+            msg+=f"EUR/USD: {eu:.4f}\n Sup: {eu*0.995:.4f} | Res: {eu*1.005:.4f}\n {get_signal(eu,eu*0.995,eu*1.005)}\n\n"
+            msg+=f"⏰ {time.strftime('%H:%M')}"
 
-        except Exception as e: print(e)
-        time.sleep(3600) # verifie toutes les 1h
+            send_whatsapp(msg)
+
+        except Exception as e:
+            print(f"Erreur: {e}")
+
+        time.sleep(7200) # 2h
 
 if os.environ.get("BOT_STARTED")!="1":
     os.environ["BOT_STARTED"]="1"
